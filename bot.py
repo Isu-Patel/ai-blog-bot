@@ -2,6 +2,8 @@
 # 30 Days AI Blog Telegram Bot (Gemini Version)
 # ============================================
 
+from flask import Flask
+import threading
 import google.generativeai as genai
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
@@ -30,6 +32,19 @@ TOPICS = [
     "Edge AI", "AI in Gaming", "AI Security", "AI in Finance", "AI Hardware",
     "AI Project Ideas", "Future of AI"
 ]
+
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "🤖 AI Blog Bot is alive!"
+
+def run():
+    app.run(host='0.0.0.0', port=8080)
+
+def keep_alive():
+    t = threading.Thread(target=run)
+    t.start()
 
 # Store user progress
 user_day = {}
@@ -95,4 +110,6 @@ def main():
     app.run_polling()
 
 if __name__ == "__main__":
+    keep_alive()
     main()
+
