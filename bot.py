@@ -1,27 +1,26 @@
 # ============================================
-# 30 Days AI Blog Telegram Bot (Gemini Version)
+# 30 Days AI Blog Telegram Bot (Gemini + Keep Alive)
 # ============================================
 
-from flask import Flask
-import threading
 import google.generativeai as genai
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from datetime import datetime, timedelta
+from flask import Flask
+import threading
 
 # ============================================
-# 🔑 PUT YOUR TOKENS HERE
+# 🔑 TOKENS
 # ============================================
-BOT_TOKEN = "8004004924:AAHSpHgeDGHGek69gCTvVLg1B-C9CuvdnSE"
-GEMINI_API_KEY = "AIzaSyCASA0_4bI7CLjr9HOyb2eHJ3rALhyMF18"
+BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"
+GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"
 # ============================================
 
 # Configure Gemini
 genai.configure(api_key=GEMINI_API_KEY)
+model = genai.GenerativeModel("gemini-2.0-flash")
 
-# Load the model
-model = genai.GenerativeModel("gemini-2.5-flash")
-
-# 30 Topics for 30 Days
+# --- 30 Topics ---
 TOPICS = [
     "Python Basics", "Machine Learning", "Deep Learning", "Natural Language Processing",
     "Data Science", "Computer Vision", "Web Development with Flask", "API Integration",
@@ -33,26 +32,14 @@ TOPICS = [
     "AI Project Ideas", "Future of AI"
 ]
 
-app = Flask('')
-
-@app.route('/')
-def home():
-    return "🤖 AI Blog Bot is alive!"
-
-def run():
-    app.run(host='0.0.0.0', port=8080)
-
-def keep_alive():
-    t = threading.Thread(target=run)
-    t.start()
-
-# Store user progress
+# --- Track user progress ---
 user_day = {}
 last_blog = {}
+last_time = {}
 
-# --- Function: Generate Blog using Gemini ---
+# --- AI Blog Generation ---
 def generate_blog(topic):
-    prompt = f"Write a detailed, engaging, with proper heading and proper syntaxes as a blog or paragraph or blog post (around 250 words) about '{topic}'."
+    prompt = f"Write a well-formatted 250-word blog post with headings and short paragraphs about '{topic}'."
     try:
         response = model.generate_content(prompt)
         return response.text.strip()
@@ -64,6 +51,8 @@ def generate_blog(topic):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     user_day[user_id] = 1
+    last_time[user_id] = datetime.now()
+
     topic = TOPICS[0]
     await update.message.reply_text(f"📘 30 Days AI Blog Challenge\n\n📅 Day 1: *{topic}*\n\nGenerating your blog...")
 
@@ -76,7 +65,7 @@ async def regive(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     day = user_day.get(user_id, 1)
     topic = TOPICS[day - 1]
-    await update.message.reply_text(f"🔄 Generating a new blog for *Day {day}: {topic}*...")
+    await update.message.reply_text(f"🔄 Regenerating a new blog for *Day {day}: {topic}*...")
 
     blog = generate_blog(topic)
     last_blog[user_id] = blog
@@ -85,7 +74,15 @@ async def regive(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # --- /nextday command ---
 async def nextday(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    user_day[user_id] = user_day.get(user_id, 1) + 1
+    now = datetime.now()
+
+    # If 24 hours passed, move to next day
+    if user_id in last_time and now - last_time[user_id] >= timedelta(hours=24):
+        user_day[user_id] = user_day.get(user_id, 1) + 1
+        last_time[user_id] = now
+    elif user_id not in user_day:
+        user_day[user_id] = 1
+        last_time[user_id] = now
 
     if user_day[user_id] > len(TOPICS):
         await update.message.reply_text("🎉 You’ve completed all 30 days! Great job!")
@@ -93,23 +90,36 @@ async def nextday(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     day = user_day[user_id]
     topic = TOPICS[day - 1]
-    await update.message.reply_text(f"🌅 Moving to Day {day}: *{topic}*\n\nGenerating your blog...")
+    await update.message.reply_text(f"🌅 Day {day}: *{topic}*\n\nGenerating your blog...")
 
     blog = generate_blog(topic)
     last_blog[user_id] = blog
     await update.message.reply_text(blog)
 
+# --- Flask Keep Alive ---
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "🤖 Telegram Bot is alive!"
+
+def run():
+    app.run(host="0.0.0.0", port=8080)
+
+def keep_alive():
+    thread = threading.Thread(target=run)
+    thread.start()
+
 # --- Main Bot Setup ---
 def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("regive", regive))
-    app.add_handler(CommandHandler("nextday", nextday))
+    keep_alive()  # ✅ Keeps bot running 24/7
+    app_bot = ApplicationBuilder().token(BOT_TOKEN).build()
+    app_bot.add_handler(CommandHandler("start", start))
+    app_bot.add_handler(CommandHandler("regive", regive))
+    app_bot.add_handler(CommandHandler("nextday", nextday))
 
     print("🤖 Bot is running... try sending /start in Telegram.")
-    app.run_polling()
+    app_bot.run_polling()
 
 if __name__ == "__main__":
-    keep_alive()
     main()
-
