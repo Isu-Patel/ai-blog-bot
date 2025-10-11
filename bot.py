@@ -12,8 +12,8 @@ import threading
 # ============================================
 # 🔑 TOKENS
 # ============================================
-BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"
-GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"
+BOT_TOKEN = "8004004924:AAHSpHgeDGHGek69gCTvVLg1B-C9CuvdnSE"
+GEMINI_API_KEY = "AIzaSyCASA0_4bI7CLjr9HOyb2eHJ3rALhyMF18"
 # ============================================
 
 # Configure Gemini
@@ -123,3 +123,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
